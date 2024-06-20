@@ -120,7 +120,7 @@ If you're focusing on implementing basic features of Apache Spark in Go, specifi
 
 By focusing on these core features and incrementally building your implementation in Go, you can create a simplified version of Spark tailored to your needs, particularly for interacting with Delta Lake format in a Spark-like manner.
 
-# Prompt: Datafrmae API
+# Prompt: Dataframe API
 
 ```
 Give me more detail about the Spark DataFrame API, and how it would need to be implmeneted in Go
