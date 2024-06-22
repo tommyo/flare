@@ -1,0 +1,9 @@
+version: v2
+modules:
+  - path: externals/spark/connector/connect/common/src/main/protobuf
+lint:
+  use:
+    - MINIMAL
+breaking:
+  use:
+    - FILE

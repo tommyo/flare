@@ -1,0 +1,13 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package
+      value: github.com/tommyo/flare/proto
+plugins:
+  - local: protoc-gen-go
+    out: proto
+    opt: module=github.com/tommyo/flare/proto
+  - local: protoc-gen-connect-go
+    out: proto
+    opt: module=github.com/tommyo/flare/proto
