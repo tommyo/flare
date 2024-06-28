@@ -10,4 +10,16 @@ A [follow up conversation](ChatGPT_Spark_Connect.md) was started around implemen
 
 ## DeltaLake
 
-Using [DeltaLake]() from Go is a driving goal for this package. [Rivian wrote the Delta Connector](https://github.com/rivian/delta-go) we're using here specifically to [share a common logstore with Spark](https://delta.io/blog/rivian-delta-go/). That feels like a hack to me. We're hoping to remove Spark from the equation altogether. If this feels too heavy we could consider others, like [the one supported by treeverse](https://github.com/treeverse/delta-go)
+Using [DeltaLake](https://delta.io/) from Go is a driving goal for this package. [Rivian wrote the Delta Connector](https://github.com/rivian/delta-go) we're using here specifically to [share a common logstore with Spark](https://delta.io/blog/rivian-delta-go/). That feels like a hack. We're hoping to remove Spark from the equation altogether. If this feels too heavy we could consider others, like [the one supported by treeverse](https://github.com/treeverse/delta-go)
+
+## Spark
+
+* [Architecture and Application Lifecycle](https://www.systemsltd.com/blogs/apache-spark-architecture-and-application-lifecycle)
+
+## Arrow
+
+[github.com/apache/arrow](https://github.com/apache/arrow)
+
+## CoPilot prompts and results
+
+* [connect/sessions](/session.copilot.md)
