@@ -20,6 +20,10 @@ Using [DeltaLake](https://delta.io/) from Go is a driving goal for this package.
 
 [github.com/apache/arrow](https://github.com/apache/arrow)
 
+## Nats
+
+[nats-spark-connector](https://github.com/nats-io/nats-spark-connector)
+
 ## CoPilot prompts and results
 
 * [connect/sessions](/session.copilot.md)

@@ -3,16 +3,38 @@ package flare
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/grpcreflect"
 	"github.com/tommyo/flare/proto"
 	"github.com/tommyo/flare/proto/protoconnect"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 var _ protoconnect.SparkConnectServiceHandler = &Server{}
 
 type Server struct {
-	conf *Config
+	conf     *Config
+	sessions *SessionStore
+}
+
+// TODO revisit
+func (s *Server) Build(sessions *SessionStore) *http.Server {
+	s.sessions = sessions
+
+	mux := http.NewServeMux()
+	mux.Handle(protoconnect.NewSparkConnectServiceHandler(s))
+
+	reflector := grpcreflect.NewStaticReflector(protoconnect.SparkConnectServiceName)
+	mux.Handle(grpcreflect.NewHandlerV1(reflector))
+	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+
+	return &http.Server{
+		Addr:    s.conf.String("addr"),
+		Handler: h2c.NewHandler(mux, &http2.Server{}),
+	}
 }
 
 // AddArtifacts implements protoconnect.SparkConnectServiceHandler.
@@ -85,10 +107,12 @@ func (s *Server) ReleaseExecute(ctx context.Context, req *connect.Request[proto.
 func (s *Server) ReleaseSession(ctx context.Context, req *connect.Request[proto.ReleaseSessionRequest]) (*connect.Response[proto.ReleaseSessionResponse], error) {
 	fmt.Printf("%v, %v\n", ctx, req)
 
-	sessionId := req.Msg.SessionId
-	key := SessionKey{UserId: req.Msg.GetUserContext().UserId, SessionId: sessionId}
+	serverSessionId := s.sessions.CloseSession(req.Msg.GetUserContext().UserId, req.Msg.SessionId)
 
-	res := &proto.ReleaseSessionResponse{}
+	res := &proto.ReleaseSessionResponse{
+		SessionId:           req.Msg.SessionId,
+		ServerSideSessionId: serverSessionId,
+	}
 	return connect.NewResponse(res), nil
 }
 

@@ -3,18 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"connectrpc.com/grpcreflect"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-
 	"github.com/tommyo/flare"
-	"github.com/tommyo/flare/proto/protoconnect"
 )
 
 func main() {
@@ -24,22 +18,16 @@ func main() {
 
 	server := flare.NewServer(config)
 
+	sessionStore := flare.NewSessionStore(config)
+
 	if err := config.Parse(); err != nil {
 		config.Usage()
 		os.Exit(1)
 	}
 
-	mux := http.NewServeMux()
-	mux.Handle(protoconnect.NewSparkConnectServiceHandler(server))
+	sessionStore.Init()
 
-	reflector := grpcreflect.NewStaticReflector(protoconnect.SparkConnectServiceName)
-	mux.Handle(grpcreflect.NewHandlerV1(reflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
-
-	public := &http.Server{
-		Addr:    config.String("addr"),
-		Handler: h2c.NewHandler(mux, &http2.Server{}),
-	}
+	public := server.Build(sessionStore)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
