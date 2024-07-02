@@ -2,16 +2,37 @@ package flare
 
 import (
 	"context"
+	"net/http"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/grpcreflect"
 	"github.com/tommyo/flare/proto"
 	"github.com/tommyo/flare/proto/protoconnect"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 var _ protoconnect.SparkConnectServiceHandler = &Server{}
 
 type Server struct {
-	conf *Config
+	conf     *Config
+	sessions *SessionStore
+}
+
+func (s *Server) Start(sessions *SessionStore) *http.Server {
+	s.sessions = sessions
+
+	mux := http.NewServeMux()
+	mux.Handle(protoconnect.NewSparkConnectServiceHandler(s))
+
+	reflector := grpcreflect.NewStaticReflector(protoconnect.SparkConnectServiceName)
+	mux.Handle(grpcreflect.NewHandlerV1(reflector))
+	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+
+	return &http.Server{
+		Addr:    s.conf.String("addr"),
+		Handler: h2c.NewHandler(mux, &http2.Server{}),
+	}
 }
 
 // AddArtifacts implements protoconnect.SparkConnectServiceHandler.

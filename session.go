@@ -49,9 +49,11 @@ type SessionKey struct {
 
 type Session struct {
 	// sessionID represents the unique identifier for the session.
-	id        string
-	userID    string
+	id     string
+	userID string
+	// TODO review eventTime use case
 	eventTime int64
+	// TODO review extraTags use case
 	extraTags map[string]string
 }
 
@@ -106,7 +108,7 @@ func (sem *SessionManager) setStatus(status SessionStatus) {
 
 func (sem *SessionManager) PostStarted() {
 	if !in([]SessionStatus{Pending}, Started) {
-		// error
+		// TODO handle error
 	}
 	defer sem.setStatus(Started)
 	// SessionData.session.sparkContext.listenerBus.post(SparkListenerConnectSessionStarted(sessionData.sessionId, sessionData.userId, clock.getTimeMillis()))
@@ -114,7 +116,7 @@ func (sem *SessionManager) PostStarted() {
 
 func (sem *SessionManager) PostClosed() {
 	if !in([]SessionStatus{Started}, Closed) {
-		// error
+		// TODO handle error
 	}
 	defer sem.setStatus(Closed)
 	// SessionData.session.sparkContext.listenerBus.post(SparkListenerConnectSessionClosed(sessionData.sessionId, sessionData.userId, clock.getTimeMillis()))
@@ -122,6 +124,86 @@ func (sem *SessionManager) PostClosed() {
 
 // ServerSessionId returns the server side session ID.
 func (sh *SessionManager) ServerSessionId() string {
-	// Placeholder for logic to return server session ID
+	// TODO replace placeholder for logic to return server session ID
 	return ""
+}
+
+// SessionManagerConfig holds the configuration for the SessionManager.
+
+// SessionManager is a global tracker of all SessionHolders holding Spark Connect sessions.
+type SessionStore struct {
+	sessions map[SessionKey]*SessionManager
+	lock     sync.RWMutex
+	config   *Config
+}
+
+func (ss *SessionStore) Init() {
+	// TODO implement Init method
+	// ss.config.GetDuration("session.timeout")
+}
+
+// GetSessionManager returns the SessionManager for the given session ID.
+func (ss *SessionStore) GetSession(userID, sessionID string) (*SessionManager, bool) {
+	ss.lock.RLock()
+	defer ss.lock.RUnlock()
+	session, ok := ss.sessions[SessionKey{UserId: userID, SessionId: sessionID}]
+	return session, ok
+}
+
+func (ss *SessionStore) CreateSession(userID, sessionID string) *SessionManager {
+	ss.lock.Lock()
+	defer ss.lock.Unlock()
+	session := NewSessionManager(&Session{userID: userID, id: sessionID})
+	ss.sessions[SessionKey{UserId: userID, SessionId: sessionID}] = session
+	return session
+}
+
+func (s *SessionStore) DeleteSession(userID, sessionID string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	delete(s.sessions, SessionKey{UserId: userID, SessionId: sessionID})
+}
+
+func (s *SessionStore) SessionCount() int {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	return len(s.sessions)
+}
+
+func (s *SessionStore) SessionKeys() []SessionKey {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	keys := make([]SessionKey, 0, len(s.sessions))
+	for key := range s.sessions {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+func (s *SessionStore) ListSessions() []SessionKey {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	managers := make([]SessionKey, 0, len(s.sessions))
+	for _, session := range s.sessions {
+		managers = append(managers, session.session.Key())
+	}
+	return managers
+}
+
+func (s *SessionStore) Close() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	for key, session := range s.sessions {
+		session.PostClosed()
+		delete(s.sessions, key)
+	}
+}
+
+// NewSessionStore creates a new instance of SessionStore with the provided configuration.
+func NewSessionStore(config *Config) *SessionStore {
+	config.RegisterDefault("session.timeout", "", "120s", "Session timeout")
+	return &SessionStore{
+		sessions: make(map[SessionKey]*SessionManager),
+		config:   config,
+	}
 }
